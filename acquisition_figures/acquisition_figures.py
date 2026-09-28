@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 import math
 import os
 import mrcfile
+import re
 
 
 
@@ -39,13 +40,13 @@ import mrcfile
 # SETTINGS
 ###############################################################################
 
-DATA_DIR = Path("path/to/your/saved/Krios/acquisition/files/with/mrc/and/xml/files")
+DATA_DIR = Path("")
 
 PROCESS = "ARETOMO"  #Write the method of motion correction and processing:ARETOMO or WARP (all caps)
 
-THUMBNAIL_ROOT = Path("") #path to the warp_tiltseries/tiltstack directory
+THUMBNAIL_ROOT = Path("") #path to the warp_tiltseries/tiltstack directory. Ignore if using ARETOMO3 or Windows Warp
 
-ARETOMO_DIRECTORY = Path("") #directory with Aretomo stacks. If using Warp
+ARETOMO_DIRECTORY = Path("") #directory with Aretomo stacks. If using Linux Warp ignore, but if uisng Windows Warp 
 
 
 # YOU CAN KEEP THESE AS THEY ARE
@@ -180,16 +181,46 @@ def find_position_thumbnail(position_name, thumbnail_root, process_name, aretomo
             "thumbnails"
             )
         
-        files = list(position_dir.glob(f"{position_name}_001_*.png"))
+        if not position_dir.exists():
+            print(
+                f"No thumbnail directory for {position_name}. Have you run WarpTools ts_stack succesfully?"
+            )
+            return None
+        
+        else:
+            files = list(position_dir.glob(f"{position_name}_001_*.png"))
         
     if process_name=="ARETOMO":
         position_dir = Path("{}/{}.mrc".format(aretomo_dir, position_name))
         png_path = "{}/{}_001.png".format(aretomo_dir, position_name)
-        
-        print(png_path)
-        
         if os.path.isfile(png_path)==False:
             print("Thumbnail doesn't exist. Creating now")
+            if os.path.isfile(position_dir)==False:
+                
+                print("No {}.mrc in directory, trying searching for other possible filenames with .mrc or .st extension".format(position_name))
+                pattern = re.compile(
+                    rf"^{re.escape(position_name)}(?:\.(?:mrc|st)|_[A-Za-z][A-Za-z0-9_-]*\.(?:mrc|st))$"
+                )
+                
+                matches = [
+                    p for p in Path(aretomo_dir).iterdir()
+                    if p.is_file() and pattern.match(p.name)
+                ]
+                if len(matches)==0:
+                    print("No files associated with {} found".format(position_name))
+                    return None
+                
+                print("Found potential stack files: {}".format(matches))
+                
+                for p in matches:
+                    try:
+                        with mrcfile.open(p, permissive=False) as mrc:
+                            print(f"{p} is a valid MRC file, using to create a thumbnail")
+                            position_dir = p
+                            break
+                    except Exception:
+                        print(f"{p} is not a valid MRC file")
+            
             with mrcfile.open(position_dir, permissive=True) as mrc:
                 tilt_no=len(mrc.data)
                 print("tilt number", tilt_no)
@@ -200,24 +231,17 @@ def find_position_thumbnail(position_name, thumbnail_root, process_name, aretomo
             plt.imsave(
                 png_path,
                 tilt_0,
-                cmap="gray")   
+                cmap="gray")
             
-        
+            print("thumbnail saved to", png_path)
+            
         files = list(png_path)
-    
-    
-    if not position_dir.exists():
-        print(
-            f"No thumbnail directory for {position_name}"
-        )
-        return None
-
+        
     if len(files) == 0:
         print(
             f"No 001 image found for {position_name}"
         )
         return None
-
 
     return files[0]
 
@@ -1130,7 +1154,7 @@ def make_figure(position,
 # def main():
 
 print("Loading Positions...")
-print(PROCESS)
+print("Process run:", PROCESS)
 
 positions = load_batch_positions(BATCH_XML, THUMBNAIL_ROOT, PROCESS, ARETOMO_DIRECTORY)
 
