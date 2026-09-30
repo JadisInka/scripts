@@ -194,7 +194,7 @@ def find_position_thumbnail(position_name, thumbnail_root, process_name, aretomo
         position_dir = Path("{}/{}.mrc".format(aretomo_dir, position_name))
         png_path = "{}/{}_001.png".format(aretomo_dir, position_name)
         if os.path.isfile(png_path)==False:
-            print("Thumbnail doesn't exist. Creating now")
+            print("Thumbnail for {} doesn't exist. Creating now".format(position_name))
             if os.path.isfile(position_dir)==False:
                 
                 print("No {}.mrc in directory, trying searching for other possible filenames with .mrc or .st extension".format(position_name))
@@ -300,8 +300,6 @@ def load_batch_positions(xml_file, thumbnail_root, process="WARP", aretomo_dir=N
                 namespaces=ns
             )
 
-        
-        
         position = Position(
             name=name,
             x=x,
@@ -312,7 +310,6 @@ def load_batch_positions(xml_file, thumbnail_root, process="WARP", aretomo_dir=N
             defocus=defocus,
             image_path=find_position_thumbnail(name,thumbnail_root,process,aretomo_dir))
         
-        print(position.name)
         
         if position.image_path is not None:
             positions.append(position)
@@ -327,7 +324,6 @@ def load_batch_positions(xml_file, thumbnail_root, process="WARP", aretomo_dir=N
                 dx = float(exposure.findtext("bp:PositionX", namespaces=ns))
                 dy = float(exposure.findtext("bp:PositionY", namespaces=ns))
         
-                
                 position = Position(
                     name=exposure.findtext("bp:Name", namespaces=ns),
     
@@ -344,7 +340,7 @@ def load_batch_positions(xml_file, thumbnail_root, process="WARP", aretomo_dir=N
     
                     image_path=find_position_thumbnail(
                         exposure.findtext("bp:Name", namespaces=ns),
-                        thumbnail_root,process))
+                        thumbnail_root,process, aretomo_dir))
                 
                 print(position.name)
                 
