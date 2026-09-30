@@ -230,7 +230,7 @@ def find_position_thumbnail(position_name, thumbnail_root, process_name, aretomo
             
             plt.imsave(
                 png_path,
-                tilt_0,
+                image,
                 cmap="gray")
             
             print("thumbnail saved to", png_path)
